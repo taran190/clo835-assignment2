@@ -25,19 +25,22 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # ✅ Debug step to verify your credentials & region
+      - name: Verify AWS Authentication
+        run: aws sts get-caller-identity
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build, tag, and push Docker image
+        id: buildpush
         run: |
           IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+          echo "Building image: $IMAGE_URI"
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
-          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
-
-      - name: Set output for image URI
-        run: echo "::set-output name=image_uri::${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
 
   deploy:
     name: Terraform Apply – Deploy Infrastructure & App
@@ -57,7 +60,7 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.0  # adjust as per your scripts
+          terraform_version: 1.5.0
 
       - name: Terraform Init
         working-directory: ./terraform
@@ -66,10 +69,17 @@ jobs:
       - name: Terraform Plan
         working-directory: ./terraform
         run: terraform plan -input=false -out=tfplan
+        env:
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_ecr_repo_name: ${{ secrets.ECR_REPOSITORY }}
+          TF_VAR_key_name: ${{ secrets.TF_VAR_key_name }}
+          TF_VAR_image_uri: ${{ needs.build_and_push.outputs.image_uri }}
 
       - name: Terraform Apply
         working-directory: ./terraform
-        run: |
-          terraform apply -input=false -auto-approve tfplan
+        run: terraform apply -input=false -auto-approve tfplan
         env:
-          IMAGE_URI: ${{ steps.build_and_push.outputs.image_uri }}
+          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_ecr_repo_name: ${{ secrets.ECR_REPOSITORY }}
+          TF_VAR_key_name: ${{ secrets.TF_VAR_key_name }}
+          TF_VAR_image_uri: ${{ needs.build_and_push.outputs.image_uri }}
