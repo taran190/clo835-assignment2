@@ -1,87 +1,59 @@
-name: CI/CD – Build & Deploy to AWS
+name: Build and Push to Amazon ECR
 
 on:
   push:
     branches:
       - main
+      - master
+  pull_request:
+    branches:
+      - main
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
-  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-  IMAGE_TAG: ${{ github.sha }}
+  AWS_REGION: us-east-1
 
 jobs:
-  build_and_push:
-    name: Build Docker Image & Push to ECR
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      # 1️⃣ Checkout the repository
+      - name: Checkout
         uses: actions/checkout@v4
 
+      # 2️⃣ Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # Optional session token (only if using temporary creds like STS)
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # ✅ Verify AWS credentials
-      - name: Test AWS authentication
+      # 3️⃣ Verify AWS identity
+      - name: Verify AWS Authentication
         run: aws sts get-caller-identity
 
-      - name: Login to Amazon ECR
+      # 4️⃣ Login to Amazon ECR
+      - name: Login to ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build, tag, and push Docker image
-        id: buildpush
+      # 5️⃣ Build and push the Web App image
+      - name: Build & Push Web App
         run: |
-          IMAGE_URI=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-          echo "Building image: $IMAGE_URI"
-          docker build -t $IMAGE_URI .
-          docker push $IMAGE_URI
-          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+          WEB_URI=${{ secrets.ECR_WEB_URI }}
+          echo "Building and pushing webapp to $WEB_URI"
+          docker build -t webapp:latest ./webapp
+          docker tag webapp:latest ${WEB_URI}:latest
+          docker push ${WEB_URI}:latest
 
-  deploy:
-    name: Terraform Apply – Deploy Infrastructure & App
-    runs-on: ubuntu-latest
-    needs: build_and_push
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.5.0
-
-      - name: Terraform Init
-        working-directory: ./terraform
-        run: terraform init -input=false
-
-      - name: Terraform Plan
-        working-directory: ./terraform
-        run: terraform plan -input=false -out=tfplan
-        env:
-          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-          TF_VAR_ecr_repo_name: ${{ secrets.ECR_REPOSITORY }}
-          TF_VAR_key_name: ${{ secrets.TF_VAR_key_name }}
-          TF_VAR_image_uri: ${{ needs.build_and_push.outputs.image_uri }}
-
-      - name: Terraform Apply
-        working-directory: ./terraform
-        run: terraform apply -input=false -auto-approve tfplan
-        env:
-          TF_VAR_aws_region: ${{ secrets.AWS_REGION }}
-          TF_VAR_ecr_repo_name: ${{ secrets.ECR_REPOSITORY }}
-          TF_VAR_key_name: ${{ secrets.TF_VAR_key_name }}
-          TF_VAR_image_uri: ${{ needs.build_and_push.outputs.image_uri }}
+      # 6️⃣ Pull, re-tag, and push the MySQL image
+      - name: Pull, Tag & Push MySQL Image
+        run: |
+          MYSQL_URI=${{ secrets.ECR_MYSQL_URI }}
+          echo "Pulling MySQL and pushing to $MYSQL_URI"
+          docker pull mysql:8.0
+          docker tag mysql:8.0 ${MYSQL_URI}:latest
+          docker push ${MYSQL_URI}:latest
