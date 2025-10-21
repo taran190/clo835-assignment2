@@ -14,6 +14,7 @@ jobs:
   build_and_push:
     name: Build Docker Image & Push to ECR
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,8 +26,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # Debug step to verify your credentials & region
-      - name: Verify AWS Authentication
+      # ✅ Verify AWS credentials
+      - name: Test AWS authentication
         run: aws sts get-caller-identity
 
       - name: Login to Amazon ECR
@@ -46,6 +47,7 @@ jobs:
     name: Terraform Apply – Deploy Infrastructure & App
     runs-on: ubuntu-latest
     needs: build_and_push
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
