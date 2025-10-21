@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout the repository
+      # 1️⃣ Checkout repository
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -27,12 +27,12 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # Optional session token (only if using temporary creds like STS)
+          # (Only include the session token if using temporary credentials)
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 3️⃣ Verify AWS identity
-      - name: Verify AWS Authentication
+      # 3️⃣ Verify credentials
+      - name: Verify AWS identity
         run: aws sts get-caller-identity
 
       # 4️⃣ Login to Amazon ECR
@@ -40,20 +40,22 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # 5️⃣ Build and push the Web App image
-      - name: Build & Push Web App
+      # 5️⃣ Build & Push Web App image (Dockerfile in root)
+      - name: Build & Push Web App image
         run: |
           WEB_URI=${{ secrets.ECR_WEB_URI }}
-          echo "Building and pushing webapp to $WEB_URI"
-          docker build -t webapp:latest ./webapp
+          echo "Building webapp from root Dockerfile..."
+          docker build -t webapp:latest -f Dockerfile .
           docker tag webapp:latest ${WEB_URI}:latest
           docker push ${WEB_URI}:latest
+          echo "✅ WebApp pushed to: ${WEB_URI}:latest"
 
-      # 6️⃣ Pull, re-tag, and push the MySQL image
-      - name: Pull, Tag & Push MySQL Image
+      # 6️⃣ Build & Push MySQL image (Dockerfile_mysql in root)
+      - name: Build & Push MySQL image
         run: |
           MYSQL_URI=${{ secrets.ECR_MYSQL_URI }}
-          echo "Pulling MySQL and pushing to $MYSQL_URI"
-          docker pull mysql:8.0
-          docker tag mysql:8.0 ${MYSQL_URI}:latest
+          echo "Building MySQL image from Dockerfile_mysql..."
+          docker build -t mysql-custom:latest -f Dockerfile_mysql .
+          docker tag mysql-custom:latest ${MYSQL_URI}:latest
           docker push ${MYSQL_URI}:latest
+          echo "✅ MySQL image pushed to: ${MYSQL_URI}:latest"
