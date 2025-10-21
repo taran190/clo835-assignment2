@@ -25,7 +25,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # ✅ Debug step to verify your credentials & region
+      # Debug step to verify your credentials & region
       - name: Verify AWS Authentication
         run: aws sts get-caller-identity
 
