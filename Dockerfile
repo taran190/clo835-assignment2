@@ -9,5 +9,5 @@ RUN set -xe \
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 EXPOSE 8080
-ENTRYPOINT [ "python3" ]
-CMD [ "app.py" ]
+# Wait for MySQL to be ready before running the app
+CMD ["sh", "-c", "echo 'Waiting for MySQL...' && sleep 40 && python3 app.py"]
