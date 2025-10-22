@@ -2,56 +2,42 @@ name: Build and Push to Amazon ECR
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [ main ]
 
 env:
-  AWS_REGION: ${{ secrets.AWS_REGION }}
+  AWS_REGION: us-east-1
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ Checkout repository
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      # 3️⃣ Verify AWS identity
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
-      # 4️⃣ Login to Amazon ECR
       - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+        uses: aws-actions/amazon-ecr-login@v2
 
-      # 5️⃣ Build & Push Web App image (Dockerfile)
-      - name: Build & Push Web App image
+      - name: Build and push Web App image
         run: |
-          WEB_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY_WEBAPP }}
-          echo "Building WebApp image..."
+          WEB_URI=${{ secrets.ECR_REPOSITORY_WEBAPP }}
           docker build -t webapp:latest -f Dockerfile .
           docker tag webapp:latest ${WEB_URI}:latest
           docker push ${WEB_URI}:latest
-          echo "✅ WebApp pushed to ${WEB_URI}:latest"
 
-      # 6️⃣ Build & Push MySQL image (Dockerfile_mysql)
-      - name: Build & Push MySQL image
+      - name: Build and push MySQL image
         run: |
-          MYSQL_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY_MYSQL }}
-          echo "Building MySQL image..."
+          MYSQL_URI=${{ secrets.ECR_REPOSITORY_MYSQL }}
           docker build -t mysql-custom:latest -f Dockerfile_mysql .
           docker tag mysql-custom:latest ${MYSQL_URI}:latest
           docker push ${MYSQL_URI}:latest
-          echo "✅ MySQL image pushed to ${MYSQL_URI}:latest"
-
