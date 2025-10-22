@@ -8,19 +8,17 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  WEBAPP_REPO: 851725282833.dkr.ecr.us-east-1.amazonaws.com/clo835-webapp
-  MYSQL_REPO: 851725282833.dkr.ecr.us-east-1.amazonaws.com/clo835-mysql
+  WEB_URI: 851725282833.dkr.ecr.us-east-1.amazonaws.com/clo835-webapp
+  MYSQL_URI: 851725282833.dkr.ecr.us-east-1.amazonaws.com/clo835-mysql
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout source code
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -28,29 +26,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 3️⃣ Verify AWS identity
-      - name: Verify AWS identity
-        run: aws sts get-caller-identity
-
-      # 4️⃣ Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # 5️⃣ Build and push Web App image
-      - name: Build & Push WebApp Image
+      - name: Build and Push WebApp image
         run: |
-          echo "🚀 Building and pushing WebApp image..."
+          echo "Building WebApp Docker image..."
           docker build -t webapp:latest -f Dockerfile .
-          docker tag webapp:latest ${{ env.WEBAPP_REPO }}:latest
-          docker push ${{ env.WEBAPP_REPO }}:latest
-          echo "✅ WebApp image pushed to ECR: ${{ env.WEBAPP_REPO }}:latest"
+          docker tag webapp:latest ${{ env.WEB_URI }}:latest
+          docker push ${{ env.WEB_URI }}:latest
 
-      # 6️⃣ Build and push MySQL image
-      - name: Build & Push MySQL Image
+      - name: Build and Push MySQL image
         run: |
-          echo "🗄️ Building and pushing MySQL image..."
+          echo "Building MySQL Docker image..."
           docker build -t mysql-custom:latest -f Dockerfile_mysql .
-          docker tag mysql-custom:latest ${{ env.MYSQL_REPO }}:latest
-          docker push ${{ env.MYSQL_REPO }}:latest
-          echo "✅ MySQL image pushed to ECR: ${{ env.MYSQL_REPO }}:latest"
+          docker tag mysql-custom:latest ${{ env.MYSQL_URI }}:latest
+          docker push ${{ env.MYSQL_URI }}:latest
