@@ -1,4 +1,4 @@
-name: Build and Push to Amazon ECR
+name: Build Docker Images (Local Test)
 
 on:
   push:
@@ -8,11 +8,8 @@ on:
     branches:
       - main
 
-env:
-  AWS_REGION: us-east-1
-
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,40 +17,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      # 3️⃣ Verify AWS identity
-      - name: Verify AWS identity
-        run: aws sts get-caller-identity
-
-      # 4️⃣ Login to Amazon ECR
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      # 5️⃣ Build & Push Web App image (Dockerfile)
-      - name: Build & Push Web App image
+      # 2️⃣ Build Web App Docker image locally
+      - name: Build Web App image
         run: |
-          WEB_URI=${{ secrets.ECR_WEB_URI }}
-          echo "Building WebApp image..."
+          echo "Building Web App image from Dockerfile..."
           docker build -t webapp:latest -f Dockerfile .
-          docker tag webapp:latest ${WEB_URI}:latest
-          docker push ${WEB_URI}:latest
-          echo "✅ WebApp image pushed to: ${WEB_URI}:latest"
 
-      # 6️⃣ Build & Push MySQL image (Dockerfile_mysql)
-      - name: Build & Push MySQL image
+      # 3️⃣ Build MySQL Docker image locally
+      - name: Build MySQL image
         run: |
-          MYSQL_URI=${{ secrets.ECR_MYSQL_URI }}
-          echo "Building MySQL image..."
+          echo "Building MySQL image from Dockerfile_mysql..."
           docker build -t mysql-custom:latest -f Dockerfile_mysql .
-          docker tag mysql-custom:latest ${MYSQL_URI}:latest
-          docker push ${MYSQL_URI}:latest
-          echo "✅ MySQL image pushed to: ${MYSQL_URI}:latest"
+
+      # 4️⃣ Verify Docker images
+      - name: List Docker images
+        run: docker images
 
