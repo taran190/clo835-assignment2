@@ -5,5 +5,6 @@ nodes:
     extraPortMappings:
       - containerPort: 30000
         hostPort: 30000
+ HEAD
         protocol: TCP
-
+ 6e6af65 (Add Kubernetes manifests and project files for CLO835 Assignment 2)

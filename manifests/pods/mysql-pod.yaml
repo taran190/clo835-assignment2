@@ -4,16 +4,20 @@ metadata:
   name: mysql-pod
   namespace: mysql
   labels:
-    app: employees
+    app: mysql
 spec:
   containers:
-  - name: mysql
-    image: mysqlapp:v1
-    imagePullPolicy: IfNotPresent
-    env:
-    - name: MYSQL_ROOT_PASSWORD
-      value: rootpass
-    - name: MYSQL_DATABASE
-      value: employees
-    ports:
-    - containerPort: 3306
+    - name: mysql
+      image: mysqlapp:v1
+      imagePullPolicy: Never
+      ports:
+        - containerPort: 3306
+      env:
+        - name: MYSQL_ROOT_PASSWORD
+          value: "root"
+        - name: MYSQL_DATABASE
+          value: "employees"
+        - name: MYSQL_USER
+          value: "user"
+        - name: MYSQL_PASSWORD
+          value: "password"

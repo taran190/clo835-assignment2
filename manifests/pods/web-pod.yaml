@@ -16,10 +16,17 @@ spec:
         - name: DBPORT
           value: "3306"
         - name: DBUSER
-          value: root
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: username
         - name: DBPWD
-          value: rootpass
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: password
         - name: DATABASE
           value: employees
       ports:
         - containerPort: 8080
+
