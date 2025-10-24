@@ -26,35 +26,34 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          # (Only include the session token if using temporary credentials)
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      # 3️⃣ Verify credentials
+      # 3️⃣ Verify AWS identity
       - name: Verify AWS identity
         run: aws sts get-caller-identity
 
       # 4️⃣ Login to Amazon ECR
-      - name: Login to ECR
+      - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # 5️⃣ Build & Push Web App image (Dockerfile in root)
+      # 5️⃣ Build & Push Web App image (Dockerfile)
       - name: Build & Push Web App image
         run: |
           WEB_URI=${{ secrets.ECR_WEB_URI }}
-          echo "Building webapp from root Dockerfile..."
+          echo "Building WebApp image..."
           docker build -t webapp:latest -f Dockerfile .
           docker tag webapp:latest ${WEB_URI}:latest
           docker push ${WEB_URI}:latest
-          echo "✅ WebApp pushed to: ${WEB_URI}:latest"
+          echo "✅ WebApp image pushed to: ${WEB_URI}:latest"
 
-      # 6️⃣ Build & Push MySQL image (Dockerfile_mysql in root)
+      # 6️⃣ Build & Push MySQL image (Dockerfile_mysql)
       - name: Build & Push MySQL image
         run: |
           MYSQL_URI=${{ secrets.ECR_MYSQL_URI }}
-          echo "Building MySQL image from Dockerfile_mysql..."
+          echo "Building MySQL image..."
           docker build -t mysql-custom:latest -f Dockerfile_mysql .
           docker tag mysql-custom:latest ${MYSQL_URI}:latest
           docker push ${MYSQL_URI}:latest
           echo "✅ MySQL image pushed to: ${MYSQL_URI}:latest"
+
